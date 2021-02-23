@@ -1,5 +1,8 @@
 package battleship;
 
+import java.awt.*;
+import java.awt.geom.Point2D;
+import java.util.Arrays;
 import java.util.Scanner;
 
 public class GameField {
@@ -13,6 +16,48 @@ public class GameField {
                 field[i][j] = '~';
             }
         }
+    }
+
+    public GameField(char[][] field) {
+        this.field = field;
+    }
+
+    public char[][] getField() {
+        return Arrays.stream(field)
+                .map(a ->  Arrays.copyOf(a, a.length))
+                .toArray(char[][]::new);
+    }
+
+    public void takeShot() {
+        boolean isHit = false;
+
+        Point2D shot;
+        do {
+            System.out.println("Take a shot!");
+            do {
+                String pointToAttack = scan.next();
+                shot = parseLocation(pointToAttack);
+            } while (!checkShot(shot));
+
+
+            int x = (int) shot.getX();
+            int y = (int) shot.getY();
+            if (field[x][y] == 'O') {
+                field[x][y] = 'X';
+                printField();
+                System.out.println("You hit a ship!");
+                isHit = true;
+
+            } else {
+                field[x][y] = 'M';
+                printField();
+                System.out.println("You missed!");
+
+
+                ///убрать потом
+                isHit = true;
+            }
+        } while (!isHit);
     }
 
     public void fillWithShips() {
@@ -40,8 +85,8 @@ public class GameField {
 
         //if reverse input
         int x1 = p1.charAt(0) - 65;
-        int x2 = p2.charAt(0) - 65;
         int y1 = Integer.parseInt(p1.replaceAll("\\D", "")) - 1;
+        int x2 = p2.charAt(0) - 65;
         int y2 = Integer.parseInt(p2.replaceAll("\\D", "")) - 1;
 
         locations[0] = Math.min(x1, x2); //x1 start
@@ -51,6 +96,25 @@ public class GameField {
 
         return locations;
     }
+
+    private Point2D parseLocation(String p) {
+        Point2D point = new Point();
+        int x = p.charAt(0) - 65;
+        int y = Integer.parseInt(p.replaceAll("\\D", "")) - 1;
+        point.setLocation(x, y);
+        return point;
+    }
+
+    private boolean checkShot(Point2D shot) {
+        if (shot.getX() > 9 || shot.getY() > 9 || shot.getX() < 0 || shot.getY() < 0) {
+            System.out.println("Error! You entered the wrong coordinates! Try again:");
+            return false;
+        }
+        return true;
+    }
+
+
+
 
     private boolean checkInput(int[] coords, ShipType ship) {
 

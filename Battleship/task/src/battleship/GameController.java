@@ -12,6 +12,14 @@ public class GameController {
     public static void initField() {
         game.fillWithShips();
     }
+    
+    public static void startGame() {
+        GameField battlefield1 = new GameField(game.getField());
+        System.out.println("The game starts!");
+        battlefield1.printField();
+
+        battlefield1.takeShot();
+    }
 
 
 }
