@@ -1,25 +1,57 @@
 package battleship;
 
+import java.io.IOException;
+
 public class GameController {
-    
-    private static GameField game;
 
-    public static void createGameField() {
-        game = new GameField();
-        game.printField();
+    private static Player player1;
+    private static Player player2;
+
+    public static void createGameFields() {
+        player1 = new Player("Player 1");
+        player2 = new Player("Player 2");
     }
 
-    public static void initField() {
-        game.fillWithShips();
+    public static void initFields() {
+        System.out.println(player1.getName() + ", place your ships on the game field");
+        player1.placeShips();
+        waitForPlayer();
+        System.out.println(player2.getName() + ", place your ships on the game field");
+        player2.placeShips();
     }
-    
+
+    private static void waitForPlayer() {
+        System.out.println("\nPress Enter and pass the move to another player");
+        try {
+            System.in.read();
+        } catch (IOException e) {
+            e.printStackTrace();
+        }
+    }
+
     public static void startGame() {
-        GameField battlefield1 = new GameField(game.getField());
-        System.out.println("The game starts!");
-        battlefield1.printField();
+        boolean isFinished = false;
 
-        battlefield1.takeShot();
+        while (!isFinished) {
+
+            waitForPlayer();
+            doTurn(player1);
+            isFinished = player1.attack(player2);
+            swapTurn();
+        }
+
+        System.out.println(player1.getName() + " won!");
     }
 
+    private static void swapTurn() {
+        Player temp = player1;
+        player1 = player2;
+        player2 = temp;
+    }
 
+    private static void doTurn(Player player) {
+        player.showFields();
+        System.out.println();
+        System.out.println(player.getName() + ", it's your turn:");
+    }
 }

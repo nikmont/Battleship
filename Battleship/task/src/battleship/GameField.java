@@ -2,13 +2,14 @@ package battleship;
 
 import java.awt.*;
 import java.awt.geom.Point2D;
-import java.util.Arrays;
 import java.util.Scanner;
 
 public class GameField {
 
     private Scanner scan = new Scanner(System.in);
     private char[][] field = new char[10][10];
+    private final int SHIPS_COUNT = 17;
+    private int successfulHitCounter = 0;
 
     public GameField() {
         for (int i = 0; i < 10; i++) {
@@ -18,50 +19,48 @@ public class GameField {
         }
     }
 
-    public GameField(char[][] field) {
-        this.field = field;
-    }
-
-    public char[][] getField() {
-        return Arrays.stream(field)
-                .map(a ->  Arrays.copyOf(a, a.length))
-                .toArray(char[][]::new);
-    }
-
-    public void takeShot() {
-        boolean isHit = false;
-
+    public boolean takeShot(GameField enemyField) {
         Point2D shot;
-        do {
-            System.out.println("Take a shot!");
+
             do {
                 String pointToAttack = scan.next();
                 shot = parseLocation(pointToAttack);
             } while (!checkShot(shot));
 
-
             int x = (int) shot.getX();
             int y = (int) shot.getY();
-            if (field[x][y] == 'O') {
-                field[x][y] = 'X';
-                printField();
-                System.out.println("You hit a ship!");
-                isHit = true;
 
+            if (enemyField.field[x][y] == 'O') {
+
+                field[x][y] = 'X'; //our field
+                enemyField.field[x][y] = 'X'; //enemy field
+                successfulHitCounter++;
+
+                if (successfulHitCounter == SHIPS_COUNT) {
+                    System.out.println("You sank the last ship. You won. Congratulations!");
+                    return true;
+                } else if (isSankAShip(x, y, enemyField.field)) {
+                    System.out.println("You sank a ship!");
+                } else {
+                    System.out.println("You hit a ship!");
+                }
+            } else if (enemyField.field[x][y] == 'X') {
+                System.out.println("You hit a ship!");
             } else {
                 field[x][y] = 'M';
-                printField();
-                System.out.println("You missed!");
-
-
-                ///убрать потом
-                isHit = true;
+                enemyField.field[x][y] = 'M';
+                System.out.println("You missed.");
             }
-        } while (!isHit);
+
+        return false;
+    }
+
+    private boolean isSankAShip(int x, int y, char[][] btlField) {
+        return !checkNeighbors(x, y, btlField); //returns true if have 'O' nearby so we have to return false
     }
 
     public void fillWithShips() {
-        for (ShipType ship:ShipType.values()) {
+        for (ShipType ship : ShipType.values()) {
             System.out.printf("%nEnter the coordinates of the %s (%d cells):%n", ship.getName(), ship.getLength());
             int[] coords = getInput();
 
@@ -73,6 +72,20 @@ public class GameField {
         }
     }
 
+    private void addShip(int[] coords, ShipType ship) {
+
+        for (int i = 0; i < ship.getLength(); i++) {
+            field[coords[0]][coords[1]] = 'O';
+
+            if (coords[2] != coords[0]) {
+                coords[0]++;
+            } else {
+                coords[1]++;
+            }
+        }
+        printField();
+    }
+
     private int[] getInput() {
         String p1 = scan.next();
         String p2 = scan.next();
@@ -80,7 +93,7 @@ public class GameField {
         return parseLocations(p1, p2);
     }
 
-    private int[] parseLocations(String p1, String p2) {
+    private int[] parseLocations(String p1, String p2) { //добавить parseLoc
         int[] locations = new int[4];
 
         //if reverse input
@@ -91,8 +104,8 @@ public class GameField {
 
         locations[0] = Math.min(x1, x2); //x1 start
         locations[1] = Math.min(y1, y2); //y1  start
-        locations[2] =  Math.max(x1, x2); //x2  end
-        locations[3] =  Math.max(y1, y2); //y2  end
+        locations[2] = Math.max(x1, x2); //x2  end
+        locations[3] = Math.max(y1, y2); //y2  end
 
         return locations;
     }
@@ -113,9 +126,6 @@ public class GameField {
         return true;
     }
 
-
-
-
     private boolean checkInput(int[] coords, ShipType ship) {
 
         if (coords[0] != coords[2] && coords[1] != coords[3]) { //wrong location check
@@ -124,16 +134,14 @@ public class GameField {
         }
 
         int shipLength = (coords[2] - coords[0]) + (coords[3] - coords[1]);
-        if (shipLength != ship.getLength()-1) { //len check
+        if (shipLength != ship.getLength() - 1) { //len check
             System.out.printf("Error! Wrong length of the %s! Try again:%n", ship.getName());
             return false;
         }
-
         if (isHaveNeighbors(coords, ship.getLength())) { //close to another check
             System.out.println("Error! You placed it too close to another one. Try again:");
             return false;
         }
-
         return true;
     }
 
@@ -148,7 +156,7 @@ public class GameField {
 
         for (int i = 0; i < len; i++) { //move by ship length
 
-            if (checkNeighbors(x, y)) {
+            if (checkNeighbors(x, y, field)) {
                 return true;
             }
 
@@ -162,23 +170,25 @@ public class GameField {
         return false;
     }
 
-    private boolean checkNeighbors(int i, int j) {
+    private boolean checkNeighbors(int i, int j, char[][] btlField) {
 
         for (int xoff = -1; xoff <= 1; xoff++) {
-            for (int yoff = -1; yoff <= 1 ; yoff++) {
+            for (int yoff = -1; yoff <= 1; yoff++) {
 
-                if (xoff == 0 && yoff == 0) { //skip yourself
+                //skip yourself
+                if (xoff == 0 && yoff == 0) {
                     continue;
                 }
 
                 int x = i + xoff;
                 int y = j + yoff;
 
-                if (x < 0 || y < 0 || x > field.length - 1 || y > field.length - 1) { //out of field
+                //out of field check
+                if (x < 0 || y < 0 || x > btlField.length - 1 || y > btlField.length - 1) {
                     continue;
                 }
-
-                if (field[x][y] == 'O') { //if there is neighbor
+                //if there is neighbor
+                if (btlField[x][y] == 'O') {
                     return true;
                 }
             }
@@ -187,26 +197,9 @@ public class GameField {
         return false;
     }
 
-    private void addShip(int[] coords, ShipType ship) {
-
-        for (int i = 0; i < ship.getLength(); i++) {
-            field[coords[0]][coords[1]] = 'O';
-
-            if (coords[2] != coords[0]) {
-                coords[0]++;
-            } else {
-//                if (y1 != y2) {
-//                    y1 ++;
-//                }
-                coords[1]++;
-            }
-        }
-
-        printField();
-    }
-
     public void printField() {
         String rows = "ABCDEFGHIJ";
+        System.out.println();
         System.out.println("  1 2 3 4 5 6 7 8 9 10");
         for (int j = 0; j < field.length; j++) {
             char[] row = field[j];
